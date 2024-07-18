@@ -1,24 +1,18 @@
 import os
-import time
-import json
-import wave
-from uuid import uuid4
-from typing import List
-from tqdm.auto import tqdm
 import streamlit as st
 import yt_dlp
 from vosk import Model, KaldiRecognizer
-from flask import Flask, request, jsonify, render_template
-import re
+from tqdm.auto import tqdm
+import wave
+import json
 
 # Environment setup
-# Add the path to ffmpeg to the PATH environment variable
-ffmpeg_path = '/usr/local/bin/ffmpeg'
-os.environ['PATH'] += os.pathsep + os.path.dirname(ffmpeg_path)  # Adjust path as necessary
+ffmpeg_path = '/usr/local/bin/ffmpeg'  # Example path, adjust as necessary
+ffprobe_path = '/usr/local/bin/ffprobe'  # Example path, adjust as necessary
+os.environ['PATH'] += os.pathsep + os.path.dirname(ffmpeg_path) + os.pathsep + os.path.dirname(ffprobe_path)
 
-# Initialize Flask app
-app = Flask(__name__)
-app.debug = False  # Disable debug mode
+# Initialize Streamlit app
+st.title("YouTube Video Transcription")
 
 # Function to check if input URL is a valid YouTube URL
 def is_valid_youtube_url(url):
@@ -35,7 +29,8 @@ def transcribe_youtube_video(url):
                 'preferredcodec': 'wav',
                 'preferredquality': '192',
             }],
-            'ffmpeg_location': ffmpeg_path,  # Set ffmpeg location directly
+            'ffmpeg_location': ffmpeg_path,
+            'ffprobe_location': ffprobe_path,
             'outtmpl': 'audio.wav',
         }
 
@@ -69,24 +64,8 @@ def transcribe_youtube_video(url):
     except Exception as e:
         st.error(f"Error transcribing audio: {e}")
         return None
-        
-# Route to render the main page
-@app.route('/')
-def index():
-    return render_template('index.html')
 
-# Route to handle user queries
-@app.route('/ask', methods=['POST'])
-def ask():
-    user_input = request.form['query']
-    response = agent(user_input)
-    conversational_memory.add_message(user_input, response['output'])  # Store conversation history
-    return jsonify({'response': response['output']})
-
-# Main Streamlit app
 def main():
-    st.title("YouTube Video Transcription and Similarity Search")
-
     # User input for YouTube video URL
     video_url = st.text_input("Enter the YouTube video URL:")
 
@@ -100,39 +79,10 @@ def main():
             if transcription:
                 st.success("Transcription complete.")
                 st.text_area("Transcription", value=transcription, height=200)
-
-                # Process and index transcription
-                chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
-
-                if chunks:
-                    for chunk in chunks:
-                        # Generate a unique ID for each chunk, embed the document, and add metadata
-                        index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
-                    st.success("Text chunks indexed successfully.")
-                else:
-                    st.error("Transcription failed. Please check the YouTube URL and try again.")
             else:
                 st.warning("Transcription failed. Please check the YouTube URL and try again.")
         else:
             st.warning("Please enter a valid YouTube video URL.")
-
-    # User input for similarity search query
-    query = st.text_input("Enter your query:")
-
-    if st.button("Search"):
-        if query:
-            # Perform similarity search
-            results = vectorstore.similarity_search(query, k=3)
-
-            # Display search results
-            if results:
-                st.subheader("Top 3 Most Relevant Documents:")
-                for result in results:
-                    st.write(f"- Document ID: {result.id}, Score: {result.score}")
-            else:
-                st.warning("No results found.")
-        else:
-            st.warning("Please enter a query.")
 
 if __name__ == '__main__':
     main()
