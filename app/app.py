@@ -130,24 +130,24 @@ def main():
     if st.button("Transcribe and Index"):
         st.info("Downloading video and transcribing audio... This may take some time.")
 
-            # Download and transcribe YouTube video
-            transcription = transcribe_youtube_video(video_url)
+        # Download and transcribe YouTube video
+        transcription = transcribe_youtube_video(video_url)
 
-            if transcription:
-                st.success("Transcription complete.")
-                st.text_area("Transcription", value=transcription, height=200)
+        if transcription:
+            st.success("Transcription complete.")
+            st.text_area("Transcription", value=transcription, height=200)
 
-                # Process and index transcription
-                chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
+            # Process and index transcription
+            chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
 
-                for chunk in chunks:
-                    index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
+            for chunk in chunks:
+                index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
 
-                st.success("Text chunks indexed successfully.")
-            else:
-                st.error("Transcription failed. Please check the YouTube URL and try again.")
+            st.success("Text chunks indexed successfully.")
         else:
-            st.warning("Please enter a valid YouTube video URL.")
+            st.error("Transcription failed. Please check the YouTube URL and try again.")
+    else:
+        st.warning("Please enter a valid YouTube video URL.")
 
     # User input for similarity search query
     query = st.text_input("Enter your query:", key="query")
