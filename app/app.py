@@ -21,7 +21,8 @@ openai_api_key = st.secrets["OPENAI_API_KEY"]
 pinecone_api_key = st.secrets["PINECONE_API_KEY"]
 
 # Initialize Pinecone client
-pinecone.init(api_key=pinecone_api_key, environment="us-east1-gcp")
+pinecone.api_key = pinecone_api_key
+pinecone.environment = "us-east1-gcp"
 
 # Initialize OpenAI embeddings
 model_name = 'text-embedding-ada-002'
@@ -29,17 +30,18 @@ embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
 
 # Define index name and specifications
 index_name = 'langchain-retrieval-augmentation'
+dimension = 1536  # Ensure this matches your embedding dimension
+metric = 'dotproduct'
 spec = pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
 
+# Connect to Pinecone
+index = pinecone.Index(index_name)
+
 # Check if index exists, create if not
-existing_indexes = pinecone.list_indexes()
-if index_name not in existing_indexes:
-    pinecone.create_index(name=index_name, dimension=1536, metric='dotproduct', spec=spec)
+if index_name not in pinecone.list_indexes():
+    pinecone.create_index(name=index_name, dimension=dimension, metric=metric, spec=spec)
     while not pinecone.describe_index(name=index_name).status['ready']:
         time.sleep(1)
-
-# Connect to Pinecone index
-index = pinecone.Index(index_name)
 
 # Initialize Pinecone vector store
 text_field = 'text'
