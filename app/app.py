@@ -17,7 +17,9 @@ from vosk import Model, KaldiRecognizer
 from flask import Flask, request, jsonify, render_template
 
 # Environment setup
-os.environ['PATH'] += os.pathsep + '/usr/local/bin'
+# Add the path to ffmpeg to the PATH environment variable
+os.environ['PATH'] += os.pathsep + '/usr/local/bin'  # Adjust path as necessary
+
 
 # Access secrets
 openai_api_key = st.secrets["OPENAI_API_KEY"]
