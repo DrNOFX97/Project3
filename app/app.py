@@ -8,11 +8,14 @@ from tqdm.auto import tqdm
 import streamlit as st
 import pinecone
 import yt_dlp
+from yt_dlp.postprocessor.ffmpeg import FFmpegPostProcessor
 from vosk import Model, KaldiRecognizer
 from flask import Flask, request, jsonify, render_template
 
 # Environment setup
 os.environ['PATH'] += os.pathsep + '/usr/local/bin'  # Adjust FFmpeg path as necessary
+# Set the ffmpeg_location
+FFmpegPostProcessor._ffmpeg_location = R'/usr/local/bin/ffmpeg'
 
 # Access secrets (assuming these are set in Streamlit secrets)
 openai_api_key = st.secrets["OPENAI_API_KEY"]
@@ -40,9 +43,7 @@ def transcribe_youtube_video(url):
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'wav',
-                'preferredquality': '192',
-                'exec_path': '/usr/local/bin/ffmpeg',  # Adjust path based on your installation
-                'exec_before_cache': '/usr/local/bin/ffprobe'  # Adjust path for ffprobe
+                'preferredquality': '192'
             }],
             'outtmpl': 'audio.wav',
         }
