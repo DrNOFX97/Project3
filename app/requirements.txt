@@ -1,12 +1,7 @@
-yt-dlp
 pinecone-client
-requests
-tiktoken
-tqdm
-datasets
-vosk
-langchain
-langchain-pinecone
 langchain-openai
-flask
+langchain-pinecone
+yt-dlp
+vosk
+tqdm
 streamlit
