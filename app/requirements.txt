@@ -9,3 +9,6 @@ langchain
 langchain-pinecone
 langchain-openai
 flask
+streamlit
+re
+pydub
