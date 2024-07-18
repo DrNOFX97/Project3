@@ -59,7 +59,6 @@ def is_valid_youtube_url(url):
 
 # Function to download and transcribe audio from YouTube video
 def transcribe_youtube_video(url):
-    # Download video
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
@@ -74,22 +73,33 @@ def transcribe_youtube_video(url):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            if isinstance(info_dict, str):
-                raise ValueError(f"Error from yt-dlp: {info_dict}")
-            if isinstance(info_dict, list):
-                info_dict = info_dict[0]
+            # First, just extract info without downloading
+            info_dict = ydl.extract_info(url, download=False)
+            
+            # Check if info_dict is a dictionary
+            if not isinstance(info_dict, dict):
+                raise ValueError(f"Expected dictionary, got {type(info_dict)}: {info_dict}")
+            
+            # If it's a dictionary, we can safely use .get()
+            video_title = info_dict.get('title', 'Unknown Title')
+            st.info(f"Downloading: {video_title}")
+            
+            # Now proceed with download
+            ydl.download([url])
 
         audio_file = 'audio.wav'
+        return audio_file
+
     except yt_dlp.utils.DownloadError as e:
         st.error(f"Error downloading video: {e}")
-        return None
     except yt_dlp.utils.ExtractorError as e:
         st.error(f"Error extracting video info: {e}")
-        return None
+    except ValueError as e:
+        st.error(f"Unexpected data format: {e}")
     except Exception as e:
-        st.error(f"Unexpected error: {e}")
-        return None
+        st.error(f"Unexpected error: {type(e).__name__}, {str(e)}")
+    
+    return None
 
     # Transcribe audio
     model = Model("model")
