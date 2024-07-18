@@ -66,16 +66,16 @@ def transcribe_youtube_video(url):
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
             'preferredquality': '192',
-            'nopostoverwrites': False  # Ensure postprocessor options are set correctly
+            'nopostoverwrites': False
         }],
         'outtmpl': 'audio.wav',
-        'ffmpeg_location': '/usr/local/bin/ffmpeg'  # Adjust path based on your installation
+        'ffmpeg_location': '/usr/local/bin/ffmpeg'
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)  # Download video based on URL
-            if isinstance(info_dict, list):  # Check if multiple videos were returned (e.g., from a playlist)
+            info_dict = ydl.extract_info(url, download=True)
+            if isinstance(info_dict, list):
                 info_dict = info_dict[0]
 
         audio_file = 'audio.wav'
