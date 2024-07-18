@@ -57,7 +57,6 @@ def is_valid_youtube_url(url):
     pattern = r'^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+$'
     return bool(re.match(pattern, url))
 
-# Function to download and transcribe audio from YouTube video
 def transcribe_youtube_video(url):
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -76,9 +75,15 @@ def transcribe_youtube_video(url):
             # First, just extract info without downloading
             info_dict = ydl.extract_info(url, download=False)
             
-            # Check if info_dict is a dictionary
-            if not isinstance(info_dict, dict):
-                raise ValueError(f"Expected dictionary, got {type(info_dict)}: {info_dict}")
+            # Print the type and content of info_dict for debugging
+            st.info(f"Type of info_dict: {type(info_dict)}")
+            st.info(f"Content of info_dict: {info_dict}")
+
+            if isinstance(info_dict, str):
+                # If info_dict is a string, it's likely an error message
+                raise ValueError(f"yt-dlp returned an error: {info_dict}")
+            elif not isinstance(info_dict, dict):
+                raise ValueError(f"Expected dictionary, got {type(info_dict)}")
             
             # If it's a dictionary, we can safely use .get()
             video_title = info_dict.get('title', 'Unknown Title')
