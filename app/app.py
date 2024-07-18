@@ -141,20 +141,19 @@ def main():
         if transcription:
             st.success("Transcription complete.")
             st.text_area("Transcription", value=transcription, height=200)
-        else:
-            st.error("Transcription failed. Please check the YouTube URL and try again.")
 
             # Process and index transcription
             chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
 
-            for chunk in chunks:
-                index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
-
-            st.success("Text chunks indexed successfully.")
+            if chunks:
+                for chunk in chunks:
+                    # Generate a unique ID for each chunk, embed the document, and add metadata
+                    index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
+                st.success("Text chunks indexed successfully.")
+            else:
+                st.error("Transcription failed. Please check the YouTube URL and try again.")
         else:
-            st.error("Transcription failed. Please check the YouTube URL and try again.")
-    else:
-        st.warning("Please enter a valid YouTube video URL.")
+            st.warning("Please enter a valid YouTube video URL.")
 
     # User input for similarity search query
     query = st.text_input("Enter your query:", key="query")
