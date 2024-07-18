@@ -62,24 +62,21 @@ def is_valid_youtube_url(url):
     return bool(re.match(pattern, url))
 
 # Function to transcribe YouTube video
-def transcribe_youtube_video(url):
+def transcribe_youtube_video(url, ffmpeg_path):
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
             'preferredquality': '192',
-            'postprocessor_args': [
-                '-ffmpeg-location', ffmpeg_path,
-                '-ffprobe-location', ffprobe_path
-            ],
         }],
+        'ffmpeg_location': ffmpeg_path,  # Set ffmpeg location directly
         'outtmpl': 'audio.wav',
     }
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+
         audio_file = 'audio.wav'
     except Exception as e:
         st.error(f"Error downloading video: {e}")
@@ -131,6 +128,7 @@ def main():
 
     # User input for YouTube video URL
     video_url = st.text_input("Enter the YouTube video URL:", key="video_url")
+    ffmpeg_path = 'path/to/ffmpeg'
 
     if st.button("Transcribe and Index"):
         st.info("Downloading video and transcribing audio... This may take some time.")
