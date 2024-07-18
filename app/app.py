@@ -76,7 +76,7 @@ def transcribe_youtube_video(url, ffmpeg_path):
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
-
+    try:
         audio_file = 'audio.wav'
     except Exception as e:
         st.error(f"Error downloading video: {e}")
