@@ -18,8 +18,9 @@ from flask import Flask, request, jsonify, render_template
 
 # Environment setup
 # Add the path to ffmpeg to the PATH environment variable
-os.environ['PATH'] += os.pathsep + '/usr/local/bin'  # Adjust path as necessary
-
+ffmpeg_path = '/usr/local/bin/ffmpeg'
+ffprobe_path = '/usr/local/bin/ffprobe'
+os.environ['PATH'] += os.pathsep + os.path.dirname(ffmpeg_path)  # Adjust path as necessary
 
 # Access secrets
 openai_api_key = st.secrets["OPENAI_API_KEY"]
@@ -60,7 +61,7 @@ def is_valid_youtube_url(url):
     pattern = r'^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+$'
     return bool(re.match(pattern, url))
 
-# Function to download and transcribe audio from YouTube video
+# Function to transcribe YouTube video
 def transcribe_youtube_video(url):
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -68,6 +69,10 @@ def transcribe_youtube_video(url):
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
             'preferredquality': '192',
+            'postprocessor_args': [
+                '-ffmpeg-location', ffmpeg_path,
+                '-ffprobe-location', ffprobe_path
+            ],
         }],
         'outtmpl': 'audio.wav',
     }
@@ -106,7 +111,7 @@ def transcribe_youtube_video(url):
     except Exception as e:
         st.error(f"Error transcribing audio: {e}")
         return None
-
+        
 # Route to render the main page
 @app.route('/')
 def index():
@@ -136,6 +141,8 @@ def main():
         if transcription:
             st.success("Transcription complete.")
             st.text_area("Transcription", value=transcription, height=200)
+        else:
+            st.error("Transcription failed. Please check the YouTube URL and try again.")
 
             # Process and index transcription
             chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
