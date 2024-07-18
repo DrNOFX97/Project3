@@ -78,12 +78,13 @@ def transcribe_youtube_video(url):
             st.info(f"Type of info_dict: {type(info_dict)}")
             st.info(f"Content of info_dict: {info_dict}")
 
-            # Instead of using .get(), we'll use a more robust approach
-            if isinstance(info_dict, dict) and 'title' in info_dict:
-                video_title = info_dict['title']
-            else:
-                video_title = "Unknown Title"
-            
+            if isinstance(info_dict, str):
+                raise ValueError(f"yt-dlp returned an unexpected string: {info_dict}")
+            elif not isinstance(info_dict, dict):
+                raise ValueError(f"yt-dlp returned an unexpected type: {type(info_dict)}")
+
+            # If we've made it here, info_dict should be a dictionary
+            video_title = info_dict.get('title', 'Unknown Title')
             st.info(f"Downloading: {video_title}")
             
             # Now proceed with download
@@ -96,10 +97,24 @@ def transcribe_youtube_video(url):
         st.error(f"Error downloading video: {e}")
     except yt_dlp.utils.ExtractorError as e:
         st.error(f"Error extracting video info: {e}")
+    except ValueError as e:
+        st.error(f"Unexpected data from yt-dlp: {e}")
     except Exception as e:
         st.error(f"Unexpected error: {type(e).__name__}, {str(e)}")
+        st.error(f"Error details: {e}")
     
+    st.error("Unable to transcribe audio from the provided YouTube URL.")
     return None
+
+# Usage
+video_url = st.text_input("Enter the YouTube video URL:", key="video_url")
+if st.button("Transcribe and Index"):
+    transcription = transcribe_youtube_video(video_url)
+    if transcription:
+        # Process transcription
+        pass
+    else:
+        st.error("Transcription failed. Please check the YouTube URL and try again.")
 
     # Transcribe audio
     model = Model("model")
