@@ -120,7 +120,8 @@ def transcribe_audio(audio_file):
 
 # Get video URL from user
 while True:
-    video_url = st.text_input("Enter the YouTube video URL: ")
+    video_url = st.text_input("Enter the YouTube video URL: ", key="video_url")
+
     if is_valid_youtube_url(video_url):
         break
     else:
@@ -356,7 +357,7 @@ text_field = 'text'
 # Initialize the Pinecone vector store object
 vectorstore = PineconeVectorStore(index, embed, text_field)
 
-query = st.text_input("Please enter your query: ")
+query = st.text_input("Please enter your query: ", key="query")
 
 vectorstore.similarity_search(
     query,  # our search query
