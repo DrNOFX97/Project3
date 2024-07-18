@@ -1,0 +1,10 @@
+streamlit
+vosk
+yt-dlp
+tqdm
+datasets
+python-dotenv
+openai
+pinecone-client
+tiktoken
+pyarrow
