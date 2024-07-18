@@ -1,56 +1,20 @@
 import os
 import time
-import sqlite3
-import subprocess
-import wave
 import json
+import wave
 from uuid import uuid4
 from typing import List
 from tqdm.auto import tqdm
 import streamlit as st
-import pinecone
 import yt_dlp
-from langchain.chains import RetrievalQA
-from langchain_pinecone import PineconeVectorStore
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from vosk import Model, KaldiRecognizer
 from flask import Flask, request, jsonify, render_template
+import re
 
 # Environment setup
 # Add the path to ffmpeg to the PATH environment variable
 ffmpeg_path = '/usr/local/bin/ffmpeg'
-ffprobe_path = '/usr/local/bin/ffprobe'
 os.environ['PATH'] += os.pathsep + os.path.dirname(ffmpeg_path)  # Adjust path as necessary
-
-# Access secrets
-openai_api_key = st.secrets["OPENAI_API_KEY"]
-langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]
-pinecone_api_key = st.secrets["PINECONE_API_KEY"]
-
-# Initialize Pinecone client
-pc = pinecone.Pinecone(api_key=pinecone_api_key, environment="us-east1-gcp")
-
-# Initialize OpenAI embeddings
-model_name = 'text-embedding-ada-002'
-embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
-
-# Define index name and specifications
-index_name = 'langchain-retrieval-augmentation'
-spec = pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
-
-# Check if index exists, create if not
-existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
-if index_name not in existing_indexes:
-    pc.create_index(index_name, dimension=1536, metric='dotproduct', spec=spec)
-    while not pc.describe_index(index_name).status['ready']:
-        time.sleep(1)
-
-# Connect to Pinecone index
-index = pc.Index(index_name)
-
-# Initialize Pinecone vector store
-text_field = 'text'
-vectorstore = PineconeVectorStore(index, embed, text_field)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -62,31 +26,28 @@ def is_valid_youtube_url(url):
     return bool(re.match(pattern, url))
 
 # Function to transcribe YouTube video
-def transcribe_youtube_video(url, ffmpeg_path):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav',
-            'preferredquality': '192',
-        }],
-        'ffmpeg_location': ffmpeg_path,  # Set ffmpeg location directly
-        'outtmpl': 'audio.wav',
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+def transcribe_youtube_video(url):
     try:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'wav',
+                'preferredquality': '192',
+            }],
+            'ffmpeg_location': ffmpeg_path,  # Set ffmpeg location directly
+            'outtmpl': 'audio.wav',
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+
         audio_file = 'audio.wav'
-    except Exception as e:
-        st.error(f"Error downloading video: {e}")
-        return None
 
-    # Transcribe audio using Vosk
-    model = Model("model")
-    rec = KaldiRecognizer(model, 16000)
+        # Transcribe audio using Vosk
+        model = Model("model")
+        rec = KaldiRecognizer(model, 16000)
 
-    try:
         wf = wave.open(audio_file, "rb")
         results = []
         total_frames = wf.getnframes()
@@ -127,34 +88,36 @@ def main():
     st.title("YouTube Video Transcription and Similarity Search")
 
     # User input for YouTube video URL
-    video_url = st.text_input("Enter the YouTube video URL:", key="video_url")
-    ffmpeg_path = 'path/to/ffmpeg'
+    video_url = st.text_input("Enter the YouTube video URL:")
 
-    if st.button("Transcribe and Index"):
-        st.info("Downloading video and transcribing audio... This may take some time.")
+    if st.button("Transcribe"):
+        if is_valid_youtube_url(video_url):
+            st.info("Downloading video and transcribing audio... This may take some time.")
 
-        # Download and transcribe YouTube video
-        transcription = transcribe_youtube_video(video_url)
+            # Download and transcribe YouTube video
+            transcription = transcribe_youtube_video(video_url)
 
-        if transcription:
-            st.success("Transcription complete.")
-            st.text_area("Transcription", value=transcription, height=200)
+            if transcription:
+                st.success("Transcription complete.")
+                st.text_area("Transcription", value=transcription, height=200)
 
-            # Process and index transcription
-            chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
+                # Process and index transcription
+                chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
 
-            if chunks:
-                for chunk in chunks:
-                    # Generate a unique ID for each chunk, embed the document, and add metadata
-                    index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
-                st.success("Text chunks indexed successfully.")
+                if chunks:
+                    for chunk in chunks:
+                        # Generate a unique ID for each chunk, embed the document, and add metadata
+                        index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
+                    st.success("Text chunks indexed successfully.")
+                else:
+                    st.error("Transcription failed. Please check the YouTube URL and try again.")
             else:
-                st.error("Transcription failed. Please check the YouTube URL and try again.")
+                st.warning("Transcription failed. Please check the YouTube URL and try again.")
         else:
             st.warning("Please enter a valid YouTube video URL.")
 
     # User input for similarity search query
-    query = st.text_input("Enter your query:", key="query")
+    query = st.text_input("Enter your query:")
 
     if st.button("Search"):
         if query:
