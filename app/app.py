@@ -12,7 +12,6 @@ from langchain.chains import RetrievalQA
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from vosk import Model, KaldiRecognizer
-from flask import Flask, request, jsonify, render_template
 
 # Environment setup
 os.environ['PATH'] += os.pathsep + '/usr/local/bin'
@@ -33,10 +32,10 @@ index_name = 'langchain-retrieval-augmentation'
 spec = pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
 
 # Check if index exists, create if not
-existing_indexes = [index_info["name"] for index_info in pinecone.list_indexes()]
+existing_indexes = pinecone.list_indexes()
 if index_name not in existing_indexes:
-    pinecone.create_index(index_name, dimension=1536, metric='dotproduct', spec=spec)
-    while not pinecone.describe_index(index_name).status['ready']:
+    pinecone.create_index(name=index_name, dimension=1536, metric='dotproduct', spec=spec)
+    while not pinecone.describe_index(name=index_name).status['ready']:
         time.sleep(1)
 
 # Connect to Pinecone index
@@ -45,10 +44,6 @@ index = pinecone.Index(index_name)
 # Initialize Pinecone vector store
 text_field = 'text'
 vectorstore = PineconeVectorStore(index, embed, text_field)
-
-# Initialize Flask app
-app = Flask(__name__)
-app.debug = False  # Disable debug mode
 
 # Function to check if input URL is a valid YouTube URL
 def is_valid_youtube_url(url):
