@@ -176,25 +176,28 @@ def main():
         st.info("Downloading video and transcribing audio... This may take some time.")
 
         if is_valid_youtube_url(video_url):
-            # Download and transcribe YouTube video
-            transcription = transcribe_youtube_video(video_url)
+            try:
+                # Download and transcribe YouTube video
+                transcription = transcribe_youtube_video(video_url)
 
-            if transcription:
-                st.success("Transcription complete.")
-                st.text_area("Transcription", value=transcription, height=200)
+                if transcription:
+                    st.success("Transcription complete.")
+                    st.text_area("Transcription", value=transcription, height=200)
 
-                # Process and index transcription
-                chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
+                    # Process and index transcription
+                    chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
 
-                if chunks:
-                    for chunk in chunks:
-                        # Generate a unique ID for each chunk, embed the document, and add metadata
-                        index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
-                    st.success("Text chunks indexed successfully.")
+                    if chunks:
+                        for chunk in chunks:
+                            # Generate a unique ID for each chunk, embed the document, and add metadata
+                            index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
+                        st.success("Text chunks indexed successfully.")
+                    else:
+                        st.error("No text chunks generated. Check the transcription process.")
                 else:
-                    st.error("Transcription failed. Please check the YouTube URL and try again.")
-            else:
-                st.warning("Error: Unable to transcribe audio from the provided YouTube URL.")
+                    st.warning("Error: Unable to transcribe audio from the provided YouTube URL.")
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
         else:
             st.warning("Please enter a valid YouTube video URL.")
 
@@ -203,18 +206,22 @@ def main():
 
     if st.button("Search"):
         if query:
-            # Perform similarity search
-            results = vectorstore.similarity_search(query, k=3)
+            try:
+                # Perform similarity search
+                results = vectorstore.similarity_search(query, k=3)
 
-            # Display search results
-            if results:
-                st.subheader("Top 3 Most Relevant Documents:")
-                for result in results:
-                    st.write(f"- Document ID: {result.id}, Score: {result.score}")
-            else:
-                st.warning("No results found.")
+                # Display search results
+                if results:
+                    st.subheader("Top 3 Most Relevant Documents:")
+                    for result in results:
+                        st.write(f"- Document ID: {result.id}, Score: {result.score}")
+                else:
+                    st.warning("No results found.")
+            except Exception as e:
+                st.error(f"An error occurred during the search: {e}")
         else:
             st.warning("Please enter a query.")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+
