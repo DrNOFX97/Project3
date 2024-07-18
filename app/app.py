@@ -32,27 +32,6 @@ from langchain.chains import LLMChain
 
 from flask import Flask, request, jsonify, render_template
 
-"""# Set API Keys"""
-
-from dotenv import load_dotenv
-import os
-
-# Load environment variables from the .env file
-load_dotenv()
-
-# Get the API keys
-pinecone_api_key = os.getenv('PINECONE_API_KEY')
-openai_api_key = os.getenv('OPENAI_API_KEY')
-langchain_api_key = os.getenv('LANGCHAIN_API_KEY')
-
-# If running on CoLab, comment out above and uncomment below
-
-# from google.colab import files, userdata
-
-# PINECONE_API_KEY=userdata.get('PINECONE_API_KEY')
-# OPENAI_API_KEY=userdata.get('OPENAI_API_KEY')
-# LANGCHAIN_API_KEY=userdata.get('LANGCHAIN_API_KEY')
-
 """# Speech-to-text
 - ### User input URL
 - ### Download YouTube video upon user URL input
