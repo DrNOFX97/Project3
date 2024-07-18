@@ -56,11 +56,7 @@ def transcribe_youtube_video(url):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
-            'preferredquality': '192',
-            'postprocessor_args': [
-                '-ffmpeg-location', ffmpeg_path,
-                '-ffprobe-location', ffprobe_path
-            ],
+            'preferredquality': '192'
         }],
         'outtmpl': 'audio.wav',
     }
