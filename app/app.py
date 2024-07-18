@@ -5,7 +5,7 @@ import yt_dlp
 from vosk import Model, KaldiRecognizer
 import wave
 import json
-from pinecone import Pinecone
+from pinecone import Pinecone, ServerlessSpec
 from tqdm.auto import tqdm
 from uuid import uuid4
 from langchain_openai import OpenAIEmbeddings
