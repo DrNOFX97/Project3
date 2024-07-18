@@ -5,11 +5,11 @@ import yt_dlp
 from vosk import Model, KaldiRecognizer
 import wave
 import json
-from pinecone import Pinecone, ServerlessSpec
 from tqdm.auto import tqdm
 from uuid import uuid4
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
+import pinecone
 
 # Add the path to ffmpeg to the PATH environment variable
 ffmpeg_path = '/usr/local/bin/ffmpeg'
@@ -21,7 +21,7 @@ openai_api_key = st.secrets["OPENAI_API_KEY"]
 pinecone_api_key = st.secrets["PINECONE_API_KEY"]
 
 # Initialize Pinecone client
-pc = Pinecone(api_key=pinecone_api_key, environment="us-east1-gcp")
+pinecone.init(api_key=pinecone_api_key, environment="us-east1-gcp")
 
 # Initialize OpenAI embeddings
 model_name = 'text-embedding-ada-002'
@@ -29,17 +29,13 @@ embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
 
 # Define index name and specifications
 index_name = 'langchain-retrieval-augmentation'
-spec = ServerlessSpec(cloud="aws", region="us-east-1")
 
 # Check if index exists, create if not
-existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
-if index_name not in existing_indexes:
-    pc.create_index(index_name, dimension=1536, metric='dotproduct', spec=spec)
-    while not pc.describe_index(index_name).status['ready']:
-        time.sleep(1)
+if index_name not in pinecone.list_indexes():
+    pinecone.create_index(index_name, dimension=1536, metric='dotproduct')
 
 # Connect to Pinecone index
-index = pc.Index(index_name)
+index = pinecone.Index(index_name)
 
 # Initialize Pinecone vector store
 text_field = 'text'
@@ -52,32 +48,49 @@ def transcribe_youtube_video(url):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
-            'preferredquality': '192'
+            'preferredquality': '192',
+            'postprocessor_args': [
+                '-ffmpeg-location', ffmpeg_path,
+                '-ffprobe-location', ffprobe_path
+            ],
         }],
         'outtmpl': 'audio.wav',
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)  # Ensure download is True
-            if isinstance(info_dict, str):
-                st.error(f"Unexpected response from yt_dlp: {info_dict}")
-                return None
-            elif not isinstance(info_dict, dict):
-                st.error(f"Unexpected response type from yt_dlp: {type(info_dict)}")
-                return None
-            # Handle successful extraction
-            audio_file = 'audio.wav'
-            return audio_file
-
-    except yt_dlp.utils.DownloadError as e:
-        st.error(f"Error downloading video: {e}")
-    except yt_dlp.utils.ExtractorError as e:
-        st.error(f"Error extracting video info: {e}")
+            ydl.download([url])
+        audio_file = 'audio.wav'
     except Exception as e:
-        st.error(f"Unexpected error: {type(e).__name__}, {str(e)}")
-    
-    return None
+        st.error(f"Error downloading video: {e}")
+        return None
+
+    # Transcribe audio using Vosk
+    model = Model("model")
+    rec = KaldiRecognizer(model, 16000)
+
+    try:
+        wf = wave.open(audio_file, "rb")
+        results = []
+        total_frames = wf.getnframes()
+
+        with tqdm(total=total_frames, desc="Transcribing") as pbar:
+            while True:
+                data = wf.readframes(4000)
+                if len(data) == 0:
+                    break
+                if rec.AcceptWaveform(data):
+                    part_result = json.loads(rec.Result())
+                    results.append(part_result['text'])
+                pbar.update(4000)
+
+        part_result = json.loads(rec.FinalResult())
+        results.append(part_result['text'])
+        transcription = " ".join(results)
+        return transcription
+    except Exception as e:
+        st.error(f"Error transcribing audio: {e}")
+        return None
 
 # Main Streamlit app
 def main():
@@ -90,43 +103,19 @@ def main():
         st.info("Downloading video and transcribing audio... This may take some time.")
 
         # Download and transcribe YouTube video
-        audio_file = transcribe_youtube_video(video_url)
+        transcription = transcribe_youtube_video(video_url)
 
-        if audio_file:
-            # Transcribe audio using Vosk
-            model = Model("model")
-            rec = KaldiRecognizer(model, 16000)
+        if transcription:
+            st.success("Transcription complete.")
+            st.text_area("Transcription", value=transcription, height=200)
 
-            try:
-                wf = wave.open(audio_file, "rb")
-                results = []
-                total_frames = wf.getnframes()
+            # Process and index transcription
+            chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
 
-                with tqdm(total=total_frames, desc="Transcribing") as pbar:
-                    while True:
-                        data = wf.readframes(4000)
-                        if len(data) == 0:
-                            break
-                        if rec.AcceptWaveform(data):
-                            part_result = json.loads(rec.Result())
-                            results.append(part_result['text'])
-                        pbar.update(4000)
+            for chunk in chunks:
+                index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
 
-                part_result = json.loads(rec.FinalResult())
-                results.append(part_result['text'])
-                transcription = " ".join(results)
-                st.success("Transcription complete.")
-                st.text_area("Transcription", value=transcription, height=200)
-
-                # Process and index transcription
-                chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
-
-                for chunk in chunks:
-                    index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
-
-                st.success("Text chunks indexed successfully.")
-            except Exception as e:
-                st.error(f"Error transcribing audio: {e}")
+            st.success("Text chunks indexed successfully.")
         else:
             st.error("Transcription failed. Please check the YouTube URL and try again.")
     else:
