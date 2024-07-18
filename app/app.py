@@ -19,14 +19,17 @@ from flask import Flask, request, jsonify, render_template
 # Environment setup
 os.environ['PATH'] += os.pathsep + '/usr/local/bin'
 
+# Access secrets
+openai_api_key = st.secrets["OPENAI_API_KEY"]
+langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]
+pinecone_api_key = st.secrets["PINECONE_API_KEY"]
+
 # Initialize Pinecone client
-PINECONE_API_KEY = "75fd2de8-952d-4ed5-b69d-8847c3c36e1c"
-pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)
+pc = pinecone.Pinecone(api_key=pinecone_api_key, environment="us-east1-gcp")
 
 # Initialize OpenAI embeddings
-OPENAI_API_KEY = "sk-fugtyauchasxx9ee9k-JDH0vU6PWkyDPyWXbelvT3BlbkFJxYGMptLaTKPN4QP4fQrX"
 model_name = 'text-embedding-ada-002'
-embed = OpenAIEmbeddings(model=model_name, openai_api_key=OPENAI_API_KEY)
+embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
 
 # Define index name and specifications
 index_name = 'langchain-retrieval-augmentation'
