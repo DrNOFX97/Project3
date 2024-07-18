@@ -1,54 +1,26 @@
 import os
 import re
 import time
-import sqlite3
-import subprocess
 import wave
 import json
 from uuid import uuid4
-from typing import List
 from tqdm.auto import tqdm
 import streamlit as st
 import pinecone
 import yt_dlp
-from langchain.chains import RetrievalQA
-from langchain_pinecone import PineconeVectorStore
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from vosk import Model, KaldiRecognizer
 from flask import Flask, request, jsonify, render_template
 
 # Environment setup
-os.environ['PATH'] += os.pathsep + '/usr/local/bin'
+os.environ['PATH'] += os.pathsep + '/usr/local/bin'  # Adjust FFmpeg path as necessary
 
-# Access secrets
+# Access secrets (assuming these are set in Streamlit secrets)
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 langchain_api_key = st.secrets["LANGCHAIN_API_KEY"]
 pinecone_api_key = st.secrets["PINECONE_API_KEY"]
 
 # Initialize Pinecone client
 pc = pinecone.Pinecone(api_key=pinecone_api_key, environment="us-east1-gcp")
-
-# Initialize OpenAI embeddings
-model_name = 'text-embedding-ada-002'
-embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
-
-# Define index name and specifications
-index_name = 'langchain-retrieval-augmentation'
-spec = pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
-
-# Check if index exists, create if not
-existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
-if index_name not in existing_indexes:
-    pc.create_index(index_name, dimension=1536, metric='dotproduct', spec=spec)
-    while not pc.describe_index(index_name).status['ready']:
-        time.sleep(1)
-
-# Connect to Pinecone index
-index = pc.Index(index_name)
-
-# Initialize Pinecone vector store
-text_field = 'text'
-vectorstore = PineconeVectorStore(index, embed, text_field)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -61,32 +33,28 @@ def is_valid_youtube_url(url):
 
 # Function to download and transcribe audio from YouTube video
 def transcribe_youtube_video(url):
-    # Download video
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav',
-            'preferredquality': '192',
-            'ffmpeg_location': '/usr/local/bin/ffmpeg'  # Adjust path based on your installation
-        }],
-        'outtmpl': 'audio.wav',
-    }
-
-
     try:
+        # Download video and extract audio
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'wav',
+                'preferredquality': '192',
+                'ffmpeg_location': '/usr/local/bin/ffmpeg'  # Adjust path based on your installation
+            }],
+            'outtmpl': 'audio.wav',
+        }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
+
         audio_file = 'audio.wav'
-    except Exception as e:
-        st.error(f"Error downloading video: {e}")
-        return None
 
-    # Transcribe audio
-    model = Model("model")
-    rec = KaldiRecognizer(model, 16000)
+        # Transcribe audio using Vosk
+        model = Model("model")
+        rec = KaldiRecognizer(model, 16000)
 
-    try:
         wf = wave.open(audio_file, "rb")
         results = []
         total_frames = wf.getnframes()
@@ -105,8 +73,13 @@ def transcribe_youtube_video(url):
         results.append(part_result['text'])
         transcription = " ".join(results)
         return transcription
+
+    except yt_dlp.DownloadError as e:
+        st.error(f"Error downloading video: {e}")
+        return None
+
     except Exception as e:
-        st.error(f"Error transcribing audio: {e}")
+        st.error(f"Error processing video: {e}")
         return None
 
 # Route to render the main page
@@ -118,7 +91,7 @@ def index():
 @app.route('/ask', methods=['POST'])
 def ask():
     user_input = request.form['query']
-    response = agent(user_input)
+    response = agent(user_input)  # Define 'agent' function to handle user queries
     conversational_memory.add_message(user_input, response['output'])  # Store conversation history
     return jsonify({'response': response['output']})
 
@@ -151,7 +124,7 @@ def main():
                 st.error("Transcription failed. Please check the YouTube URL and try again.")
         else:
             st.warning("Please enter a valid YouTube video URL.")
-            
+
     # User input for similarity search query
     query = st.text_input("Enter your query:", key="query")
 
