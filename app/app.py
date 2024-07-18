@@ -9,7 +9,7 @@ from tqdm.auto import tqdm
 from uuid import uuid4
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
-import pinecone
+from pinecone import Pinecone, ServerlessSpec
 
 # Add the path to ffmpeg to the PATH environment variable
 ffmpeg_path = '/usr/local/bin/ffmpeg'
@@ -21,7 +21,7 @@ openai_api_key = st.secrets["OPENAI_API_KEY"]
 pinecone_api_key = st.secrets["PINECONE_API_KEY"]
 
 # Initialize Pinecone client
-pinecone.init(api_key=pinecone_api_key, environment="us-east1-gcp")
+pc = Pinecone(api_key=pinecone_api_key, environment="us-east1-gcp")
 
 # Initialize OpenAI embeddings
 model_name = 'text-embedding-ada-002'
@@ -29,13 +29,21 @@ embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
 
 # Define index name and specifications
 index_name = 'langchain-retrieval-augmentation'
+spec = ServerlessSpec(cloud="aws", region="us-east-1")
 
 # Check if index exists, create if not
-if index_name not in pinecone.list_indexes():
-    pinecone.create_index(index_name, dimension=1536, metric='dotproduct')
+if index_name not in pc.list_indexes().names():
+    pc.create_index(
+        name=index_name,
+        dimension=1536,
+        metric='dotproduct',
+        spec=spec
+    )
+    while not pc.describe_index(index_name).status['ready']:
+        time.sleep(1)
 
 # Connect to Pinecone index
-index = pinecone.Index(index_name)
+index = pc.Index(index_name)
 
 # Initialize Pinecone vector store
 text_field = 'text'
