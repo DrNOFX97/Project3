@@ -9,8 +9,6 @@ from tqdm.auto import tqdm
 from uuid import uuid4
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
-from pinecone.grpc import PineconeGRPC as Pinecone
-from pinecone import ServerlessSpec
 
 # Add the path to ffmpeg to the PATH environment variable
 ffmpeg_path = '/usr/local/bin/ffmpeg'
