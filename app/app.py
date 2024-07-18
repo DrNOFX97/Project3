@@ -21,8 +21,7 @@ openai_api_key = st.secrets["OPENAI_API_KEY"]
 pinecone_api_key = st.secrets["PINECONE_API_KEY"]
 
 # Initialize Pinecone client
-pinecone.api_key = pinecone_api_key
-pinecone.environment = "us-east1-gcp"
+pinecone.init(api_key=pinecone_api_key, environment="us-east1-gcp")
 
 # Initialize OpenAI embeddings
 model_name = 'text-embedding-ada-002'
@@ -34,14 +33,15 @@ dimension = 1536  # Ensure this matches your embedding dimension
 metric = 'dotproduct'
 spec = pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
 
-# Connect to Pinecone
-index = pinecone.Index(index_name)
-
 # Check if index exists, create if not
 if index_name not in pinecone.list_indexes():
     pinecone.create_index(name=index_name, dimension=dimension, metric=metric, spec=spec)
+    # Wait for the index to become ready
     while not pinecone.describe_index(name=index_name).status['ready']:
         time.sleep(1)
+
+# Connect to Pinecone index
+index = pinecone.Index(index_name)
 
 # Initialize Pinecone vector store
 text_field = 'text'
@@ -67,7 +67,6 @@ def transcribe_youtube_video(url):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Extract info without downloading
             info_dict = ydl.extract_info(url, download=False)
             
             if isinstance(info_dict, str):
@@ -75,7 +74,6 @@ def transcribe_youtube_video(url):
             elif not isinstance(info_dict, dict):
                 raise ValueError(f"yt-dlp returned an unexpected type: {type(info_dict)}")
 
-            # Proceed with download
             video_title = info_dict.get('title', 'Unknown Title')
             st.info(f"Downloading: {video_title}")
             ydl.download([url])
