@@ -31,11 +31,10 @@ embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
 index_name = 'langchain-retrieval-augmentation'
 dimension = 1536  # Ensure this matches your embedding dimension
 metric = 'dotproduct'
-spec = pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
 
 # Check if index exists, create if not
 if index_name not in pinecone.list_indexes():
-    pinecone.create_index(name=index_name, dimension=dimension, metric=metric, spec=spec)
+    pinecone.create_index(name=index_name, dimension=dimension, metric=metric)
     # Wait for the index to become ready
     while not pinecone.describe_index(name=index_name).status['ready']:
         time.sleep(1)
