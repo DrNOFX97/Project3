@@ -1,15 +1,7 @@
-os
-re
-json
-time
-wave
 yt-dlp
-sqlite3
 pinecone-client
 requests
 tiktoken
-subprocess
-uuid
 tqdm
 datasets
 vosk
