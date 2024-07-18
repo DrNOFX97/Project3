@@ -80,16 +80,16 @@ def transcribe_youtube_video(url):
             if isinstance(info_dict, list):
                 info_dict = info_dict[0]
 
-    audio_file = 'audio.wav'
-except yt_dlp.utils.DownloadError as e:
-    st.error(f"Error downloading video: {e}")
-    return None
-except yt_dlp.utils.ExtractorError as e:
-    st.error(f"Error extracting video info: {e}")
-    return None
-except Exception as e:
-    st.error(f"Unexpected error: {e}")
-    return None
+        audio_file = 'audio.wav'
+    except yt_dlp.utils.DownloadError as e:
+        st.error(f"Error downloading video: {e}")
+        return None
+    except yt_dlp.utils.ExtractorError as e:
+        st.error(f"Error extracting video info: {e}")
+        return None
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
+        return None
 
     # Transcribe audio
     model = Model("model")
