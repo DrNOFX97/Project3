@@ -197,7 +197,7 @@ def main():
                 else:
                     st.warning("Error: Unable to transcribe audio from the provided YouTube URL.")
             except Exception as e:
-                st.error(f"An error occurred: {e}")
+                st.error(f"An error occurred during transcription and indexing: {e}")
         else:
             st.warning("Please enter a valid YouTube video URL.")
 
@@ -224,4 +224,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
