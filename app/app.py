@@ -41,6 +41,8 @@ def transcribe_youtube_video(url):
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'wav',
                 'preferredquality': '192',
+                'exec_path': '/usr/local/bin/ffmpeg',  # Adjust path based on your installation
+                'exec_before_cache': '/usr/local/bin/ffprobe'  # Adjust path for ffprobe
             }],
             'outtmpl': 'audio.wav',
         }
