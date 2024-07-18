@@ -11,4 +11,3 @@ langchain-openai
 flask
 streamlit
 re
-pydub
