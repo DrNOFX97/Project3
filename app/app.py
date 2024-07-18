@@ -60,14 +60,12 @@ def is_valid_youtube_url(url):
 
 # Function to download and transcribe audio from YouTube video
 def transcribe_youtube_video(url):
-    # Download video
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
             'preferredquality': '192',
-            'ffmpeg_location': '/usr/local/bin/ffmpeg'  # Adjust path based on your installation
         }],
         'outtmpl': 'audio.wav',
     }
@@ -80,7 +78,7 @@ def transcribe_youtube_video(url):
         st.error(f"Error downloading video: {e}")
         return None
 
-    # Transcribe audio
+    # Transcribe audio using Vosk
     model = Model("model")
     rec = KaldiRecognizer(model, 16000)
 
