@@ -135,10 +135,18 @@ if st.button("Transcribe and Index"):
                     results.append(part_result['text'])
                 pbar.update(4000)
 
-        part_result = json.loads(rec.FinalResult())
-        results.append(part_result['text'])
-        transcription = " ".join(results)
-        return transcription
+    # Load the JSON result from 'rec.FinalResult()'
+    part_result = json.loads(rec.FinalResult())
+    
+    # Append the extracted text to the results list
+    results.append(part_result['text'])
+    
+    # Join all texts in results into a single transcription string
+    transcription = " ".join(results)
+    
+    # Return the final transcription
+    return transcription
+
         
     except Exception as e:
         st.error(f"Error transcribing audio: {e}")
