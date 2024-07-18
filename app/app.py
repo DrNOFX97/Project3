@@ -75,6 +75,9 @@ def transcribe_youtube_video(url):
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)  # Download video based on URL
+            if 'entries' in info_dict:  # Check if multiple videos were returned (playlist)
+                info_dict = info_dict['entries'][0]
+
         audio_file = 'audio.wav'
     except Exception as e:
         st.error(f"Error downloading video: {e}")
