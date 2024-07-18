@@ -139,6 +139,7 @@ if st.button("Transcribe and Index"):
         results.append(part_result['text'])
         transcription = " ".join(results)
         return transcription
+        
     except Exception as e:
         st.error(f"Error transcribing audio: {e}")
         return None
