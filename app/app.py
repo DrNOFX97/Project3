@@ -5,7 +5,7 @@ import yt_dlp
 from vosk import Model, KaldiRecognizer
 import wave
 import json
-from pinecone.grpc import PineconeGRPC as Pinecone
+from pinecone import Pinecone
 from tqdm.auto import tqdm
 from uuid import uuid4
 from langchain_openai import OpenAIEmbeddings
