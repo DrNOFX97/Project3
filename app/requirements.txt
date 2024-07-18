@@ -8,3 +8,4 @@ vosk
 langchain
 langchain-pinecone
 langchain-openai
+flask
