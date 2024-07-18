@@ -20,11 +20,11 @@ from flask import Flask, request, jsonify, render_template
 os.environ['PATH'] += os.pathsep + '/usr/local/bin'
 
 # Initialize Pinecone client
-pc = pinecone.Pinecone(api_key=pinecone_api_key)
+pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)
 
 # Initialize OpenAI embeddings
 model_name = 'text-embedding-ada-002'
-embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
+embed = OpenAIEmbeddings(model=model_name, openai_api_key=OPENAI_API_KEY)
 
 # Define index name and specifications
 index_name = 'langchain-retrieval-augmentation'
