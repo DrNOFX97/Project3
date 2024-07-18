@@ -73,12 +73,12 @@ def transcribe_youtube_video(url):
     }
 
     try:
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        if isinstance(info_dict, str):
-            raise ValueError(f"Error from yt-dlp: {info_dict}")
-        if isinstance(info_dict, list):
-            info_dict = info_dict[0]
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            if isinstance(info_dict, str):
+                raise ValueError(f"Error from yt-dlp: {info_dict}")
+            if isinstance(info_dict, list):
+                info_dict = info_dict[0]
 
     audio_file = 'audio.wav'
 except yt_dlp.utils.DownloadError as e:
