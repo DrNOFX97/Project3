@@ -128,8 +128,7 @@ def main():
     video_url = st.text_input("Enter the YouTube video URL:", key="video_url")
 
     if st.button("Transcribe and Index"):
-        if is_valid_youtube_url(video_url):
-            st.info("Downloading video and transcribing audio... This may take some time.")
+        st.info("Downloading video and transcribing audio... This may take some time.")
 
             # Download and transcribe YouTube video
             transcription = transcribe_youtube_video(video_url)
