@@ -13,6 +13,10 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from vosk import Model, KaldiRecognizer
 
+# Initialize Pinecone client
+from pinecone.grpc import PineconeGRPC as Pinecone
+from pinecone import ServerlessSpec
+
 # Environment setup
 os.environ['PATH'] += os.pathsep + '/usr/local/bin'
 
@@ -20,12 +24,8 @@ os.environ['PATH'] += os.pathsep + '/usr/local/bin'
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 pinecone_api_key = st.secrets["PINECONE_API_KEY"]
 
-# Initialize Pinecone client
-pinecone.init(api_key=pinecone_api_key, environment="us-east1-gcp")
-
-# Initialize OpenAI embeddings
-model_name = 'text-embedding-ada-002'
-embed = OpenAIEmbeddings(model=model_name, openai_api_key=openai_api_key)
+# Initialize the Pinecone client
+pc = Pinecone(api_key=pinecone_api_key)
 
 # Define index name and specifications
 index_name = 'langchain-retrieval-augmentation'
@@ -33,18 +33,26 @@ dimension = 1536  # Ensure this matches your embedding dimension
 metric = 'dotproduct'
 
 # Check if index exists, create if not
-if index_name not in pinecone.list_indexes():
-    pinecone.create_index(name=index_name, dimension=dimension, metric=metric)
+if index_name not in pc.list_indexes().names():
+    pc.create_index(
+        name=index_name,
+        dimension=dimension,
+        metric=metric,
+        spec=ServerlessSpec(
+            cloud='aws',
+            region='us-east-1'
+        )
+    )
     # Wait for the index to become ready
-    while not pinecone.describe_index(name=index_name).status['ready']:
+    while not pc.describe_index(name=index_name).status['ready']:
         time.sleep(1)
 
 # Connect to Pinecone index
-index = pinecone.Index(index_name)
+index = pc.Index(index_name)
 
 # Initialize Pinecone vector store
 text_field = 'text'
-vectorstore = PineconeVectorStore(index, embed, text_field)
+vectorstore = PineconeVectorStore(index, OpenAIEmbeddings(model='text-embedding-ada-002', openai_api_key=openai_api_key), text_field)
 
 # Function to check if input URL is a valid YouTube URL
 def is_valid_youtube_url(url):
@@ -140,7 +148,7 @@ def main():
                         if chunks:
                             for chunk in chunks:
                                 # Generate a unique ID for each chunk, embed the document, and add metadata
-                                index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
+                                index.upsert(vectors=[(str(uuid4()), OpenAIEmbeddings(model='text-embedding-ada-002', openai_api_key=openai_api_key).embed_document(chunk), {'text': chunk})])
                             st.success("Text chunks indexed successfully.")
                         else:
                             st.error("No text chunks generated. Check the transcription process.")
