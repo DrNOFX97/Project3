@@ -1,5 +1,3 @@
-Certainly! Here's a comprehensive `README.md` file for the GitHub home page of your project:
-
 ```markdown
 # Speech-to-Text System for YouTube Videos
 
