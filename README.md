@@ -1,4 +1,3 @@
-```markdown
 # Speech-to-Text System for YouTube Videos
 
 ## Overview
