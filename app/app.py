@@ -10,11 +10,14 @@ from uuid import uuid4
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
+import subprocess
 
-# Add the path to ffmpeg to the PATH environment variable
-ffmpeg_path = '/usr/local/bin/ffmpeg'
-ffprobe_path = '/usr/local/bin/ffprobe'
-os.environ['PATH'] += os.pathsep + os.path.dirname(ffmpeg_path)
+# Update ffmpeg and ffprobe paths
+ffmpeg_path = '/opt/miniconda3/bin/ffmpeg'
+ffprobe_path = '/opt/miniconda3/bin/ffprobe'
+
+# Update PATH environment variable
+os.environ['PATH'] = f"{os.path.dirname(ffmpeg_path)}:{os.environ['PATH']}"
 
 # Access secrets
 openai_api_key = st.secrets["OPENAI_API_KEY"]
@@ -49,6 +52,15 @@ index = pc.Index(index_name)
 text_field = 'text'
 vectorstore = PineconeVectorStore(index, embed, text_field)
 
+def check_ffmpeg():
+    try:
+        subprocess.run([ffmpeg_path, '-version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        st.success("ffmpeg is accessible")
+        return True
+    except subprocess.CalledProcessError:
+        st.error("ffmpeg is not accessible. Please check the path and permissions.")
+        return False
+
 # Function to transcribe YouTube video
 def transcribe_youtube_video(url):
     ydl_opts = {
@@ -59,6 +71,7 @@ def transcribe_youtube_video(url):
             'preferredquality': '192'
         }],
         'outtmpl': 'audio.wav',
+        'ffmpeg_location': os.path.dirname(ffmpeg_path),
     }
 
     try:
@@ -100,30 +113,35 @@ def transcribe_youtube_video(url):
 def main():
     st.title("YouTube Video Transcription and Similarity Search")
 
+    # Check if ffmpeg is accessible
+    if not check_ffmpeg():
+        st.stop()
+
     # User input for YouTube video URL
     video_url = st.text_input("Enter the YouTube video URL:", key="video_url")
 
     if st.button("Transcribe and Index"):
-        st.info("Downloading video and transcribing audio... This may take some time.")
+        if video_url:
+            st.info("Downloading video and transcribing audio... This may take some time.")
 
-        # Download and transcribe YouTube video
-        transcription = transcribe_youtube_video(video_url)
+            # Download and transcribe YouTube video
+            transcription = transcribe_youtube_video(video_url)
 
-        if transcription:
-            st.success("Transcription complete.")
-            st.text_area("Transcription", value=transcription, height=200)
+            if transcription:
+                st.success("Transcription complete.")
+                st.text_area("Transcription", value=transcription, height=200)
 
-            # Process and index transcription
-            chunks = text_splitter.split_text(transcription)[:3]  # Example chunking
+                # Process and index transcription
+                chunks = [transcription]  # For simplicity, using the whole transcription as one chunk
 
-            for chunk in chunks:
-                index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
+                for chunk in chunks:
+                    index.upsert(vectors=[(str(uuid4()), embed.embed_document(chunk), {'text': chunk})])
 
-            st.success("Text chunks indexed successfully.")
+                st.success("Text chunks indexed successfully.")
+            else:
+                st.error("Transcription failed. Please check the YouTube URL and try again.")
         else:
-            st.error("Transcription failed. Please check the YouTube URL and try again.")
-    else:
-        st.warning("Please enter a valid YouTube video URL.")
+            st.warning("Please enter a valid YouTube video URL.")
 
     # User input for similarity search query
     query = st.text_input("Enter your query:", key="query")
@@ -136,8 +154,8 @@ def main():
             # Display search results
             if results:
                 st.subheader("Top 3 Most Relevant Documents:")
-                for result in results:
-                    st.write(f"- Document ID: {result.id}, Score: {result.score}")
+                for i, result in enumerate(results, 1):
+                    st.write(f"{i}. {result.page_content}")
             else:
                 st.warning("No results found.")
         else:
