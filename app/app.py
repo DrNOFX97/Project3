@@ -13,9 +13,19 @@ from pinecone import Pinecone, ServerlessSpec
 import subprocess
 import shutil
 
-# Find ffmpeg and ffprobe in system PATH
+# Try to find ffmpeg in PATH
 ffmpeg_path = shutil.which('ffmpeg')
-ffprobe_path = shutil.which('ffprobe')
+
+# If not found, specify a default path
+if not ffmpeg_path:
+    # Adjust this path as necessary for your system
+    default_ffmpeg_path = "/usr/bin/ffmpeg"
+    if os.path.exists(default_ffmpeg_path):
+        ffmpeg_path = default_ffmpeg_path
+
+# Debug information
+st.write(f"Current PATH: {os.environ.get('PATH', 'Not set')}")
+st.write(f"ffmpeg path: {ffmpeg_path}")
 
 # Access secrets
 openai_api_key = st.secrets["OPENAI_API_KEY"]
@@ -52,7 +62,7 @@ vectorstore = PineconeVectorStore(index, embed, text_field)
 
 def check_ffmpeg():
     if not ffmpeg_path:
-        st.error("ffmpeg not found in system PATH. Please install ffmpeg and make sure it's in your PATH.")
+        st.error("ffmpeg not found. Please install ffmpeg or specify its path in the script.")
         return False
     
     try:
