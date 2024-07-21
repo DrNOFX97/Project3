@@ -11,13 +11,11 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
 import subprocess
+import shutil
 
-# Update ffmpeg and ffprobe paths
-ffmpeg_path = '/opt/miniconda3/bin/ffmpeg'
-ffprobe_path = '/opt/miniconda3/bin/ffprobe'
-
-# Update PATH environment variable
-os.environ['PATH'] = f"{os.path.dirname(ffmpeg_path)}:{os.environ['PATH']}"
+# Find ffmpeg and ffprobe in system PATH
+ffmpeg_path = shutil.which('ffmpeg')
+ffprobe_path = shutil.which('ffprobe')
 
 # Access secrets
 openai_api_key = st.secrets["OPENAI_API_KEY"]
@@ -53,12 +51,20 @@ text_field = 'text'
 vectorstore = PineconeVectorStore(index, embed, text_field)
 
 def check_ffmpeg():
+    if not ffmpeg_path:
+        st.error("ffmpeg not found in system PATH. Please install ffmpeg and make sure it's in your PATH.")
+        return False
+    
     try:
-        subprocess.run([ffmpeg_path, '-version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        st.success("ffmpeg is accessible")
+        result = subprocess.run([ffmpeg_path, '-version'], check=True, capture_output=True, text=True)
+        st.success(f"ffmpeg is accessible. Version info: {result.stdout.split('version')[1].split()[0]}")
         return True
-    except subprocess.CalledProcessError:
-        st.error("ffmpeg is not accessible. Please check the path and permissions.")
+    except subprocess.CalledProcessError as e:
+        st.error(f"Error running ffmpeg: {e}")
+        st.error(f"ffmpeg stderr: {e.stderr}")
+        return False
+    except Exception as e:
+        st.error(f"Unexpected error checking ffmpeg: {str(e)}")
         return False
 
 # Function to transcribe YouTube video
@@ -71,7 +77,6 @@ def transcribe_youtube_video(url):
             'preferredquality': '192'
         }],
         'outtmpl': 'audio.wav',
-        'ffmpeg_location': os.path.dirname(ffmpeg_path),
     }
 
     try:
