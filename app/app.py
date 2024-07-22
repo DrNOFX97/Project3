@@ -22,6 +22,9 @@ if not ffmpeg_path:
     default_ffmpeg_path = "/usr/bin/ffmpeg"
     if os.path.exists(default_ffmpeg_path):
         ffmpeg_path = default_ffmpeg_path
+    else:
+        st.error("FFmpeg not found. Please install FFmpeg or specify its path in the script.")
+        st.stop()
 
 # Debug information
 st.write(f"Current PATH: {os.environ.get('PATH', 'Not set')}")
